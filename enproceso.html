@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cubicaje - Comercializadora de Llantas Tres Siglos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .hidden {
+            display: none;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            z-index: 1001;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-4">
+    <h3 class="text-xl font-semibold">Inventario de Llantas</h3>
+    <div class="flex gap-2">
+        <button id="reload-inventario" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Recargar Inventario</button>
+        <button id="add-llanta" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Agregar Llanta</button>
+    </div>
+</div>
+        <!-- Pestañas -->
+        <div class="flex border-b border-gray-300 mb-6">
+            <button id="tab-inventario" class="tab-button px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600">Inventario</button>
+            <button id="tab-flota" class="tab-button px-4 py-2 font-medium text-gray-500 hover:text-blue-600">Flota</button>
+            <button id="tab-pedidos" class="tab-button px-4 py-2 font-medium text-gray-500 hover:text-blue-600">Pedidos</button>
+            <button id="tab-confirmados" class="tab-button px-4 py-2 font-medium text-gray-500 hover:text-blue-600">Pedidos Confirmados</button>
+        </div>
+
+        <!-- Contenido de las pestañas -->
+        <div id="inventario-content" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Inventario de Llantas</h3>
+                <button id="add-llanta" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Agregar Llanta</button>
+            </div>
+            
+            <div class="overflow-x-auto bg-white rounded-lg shadow">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Llanta</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso (kg)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volumen Unitario</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Unitario ($)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventario-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Datos de llantas se llenarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="flota-content" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Flota de Camiones</h3>
+                <button id="add-camion" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Agregar Camión</button>
+            </div>
+            
+            <div class="overflow-x-auto bg-white rounded-lg shadow">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Económico</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidad</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asignado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modelo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placas</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cap. Carga (kg)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cap. Volumen (m³)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flota-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Datos de camiones se llenarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="pedidos-content" class="tab-content hidden">
+            <h3 class="text-xl font-semibold mb-4">Registro de Pedidos</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h4 class="font-medium mb-2">Datos del Camión</h4>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Número Económico</label>
+                        <input type="text" id="camion-economico" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div id="camion-info" class="hidden">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Unidad</label>
+                                <p id="camion-unidad" class="text-gray-900"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Cap. Carga</label>
+                                <p id="camion-carga" class="text-gray-900"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Cap. Volumen</label>
+                                <p id="camion-volumen" class="text-gray-900"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Placas</label>
+                                <p id="camion-placas" class="text-gray-900"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Encargado</label>
+                                <p id="camion-asignado" class="text-gray-900"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h4 class="font-medium mb-2">Carga</h4>
+                        <canvas id="carga-chart" height="150"></canvas>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h4 class="font-medium mb-2">Volumen</h4>
+                        <canvas id="volumen-chart" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+                <h4 class="font-medium mb-4">Agregar Llantas al Pedido</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Código Llanta</label>
+                        <input type="text" id="codigo-llanta" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                        <input type="text" id="descripcion-llanta" class="w-full px-3 py-2 border border-gray-300 rounded-md" readonly>
+                    </div>
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                        <input type="number" id="cantidad-llanta" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Peso (kg)</label>
+                        <input type="number" id="peso-llanta" class="w-full px-3 py-2 border border-gray-300 rounded-md" readonly>
+                    </div>
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor Unitario ($)</label>
+                        <input type="text" id="valor-llanta" class="w-full px-3 py-2 border border-gray-300 rounded-md" readonly>
+                    </div>
+                </div>
+                
+                <button id="agregar-pedido" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Agregar al Pedido</button>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+                <h4 class="font-medium mb-4">Llantas del Pedido</h4>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volumen Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quitar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pedidos-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Llantas del pedido se llenarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Cantidad Total</label>
+                        <p id="total-cantidad" class="text-lg font-semibold">0</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Volumen Total</label>
+                        <p id="total-volumen" class="text-lg font-semibold">0 m³</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Peso Total</label>
+                        <p id="total-peso" class="text-lg font-semibold">0 kg</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Valor Total</label>
+                        <p id="total-valor" class="text-lg font-semibold">$0.00</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 flex justify-end">
+                    <button id="aceptar-pedido" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Aceptar Pedido</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="confirmados-content" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Pedidos Confirmados</h3>
+            </div>
+            
+            <div class="overflow-x-auto bg-white rounded-lg shadow">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Camión/Encargado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Llantas</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volumen</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="confirmados-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Pedidos confirmados se llenarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modales -->
+        <div id="modal-overlay" class="modal-overlay hidden"></div>
+
+        <!-- Modal Agregar/Editar Llanta -->
+        <div id="modal-llanta" class="modal-container hidden w-11/12 md:w-2/3">
+            <h3 class="text-xl font-semibold mb-4" id="modal-llanta-title">Agregar Llanta</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ID Llanta</label>
+                    <input type="text" id="modal-llanta-id" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <input type="text" id="modal-llanta-descripcion" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Peso (kg)</label>
+                    <input type="number" id="modal-llanta-peso" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Volumen Unitario</label>
+                    <input type="number" step="0.001" id="modal-llanta-volumen" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Valor Unitario ($)</label>
+                    <input type="text" id="modal-llanta-valor" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="cancelar-llanta" class="px-4 py-2 border border-gray-300 rounded-md">Cancelar</button>
+                <button id="guardar-llanta" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Guardar</button>
+            </div>
+        </div>
+
+        <!-- Modal Agregar/Editar Camión -->
+        <div id="modal-camion" class="modal-container hidden w-11/12 md:w-2/3">
+            <h3 class="text-xl font-semibold mb-4" id="modal-camion-title">Agregar Camión</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Número Económico</label>
+                    <input type="text" id="modal-camion-economico" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
+                    <input type="text" id="modal-camion-unidad" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Asignado</label>
+                    <input type="text" id="modal-camion-asignado" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
+                    <input type="text" id="modal-camion-modelo" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Placas</label>
+                    <input type="text" id="modal-camion-placas" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                    <input type="text" id="modal-camion-ubicacion" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cap. Carga (kg)</label>
+                    <input type="number" id="modal-camion-carga" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cap. Volumen (m³)</label>
+                    <input type="number" step="0.001" id="modal-camion-volumen" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="cancelar-camion" class="px-4 py-2 border border-gray-300 rounded-md">Cancelar</button>
+                <button id="guardar-camion" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variables de estado
+            let inventario = [];
+            let flota = [];
+            let pedidoActual = {
+                camion: null,
+                llantas: [],
+                totalCantidad: 0,
+                totalVolumen: 0,
+                totalPeso: 0,
+                totalValor: 0
+            };
+            let pedidosConfirmados = [];
+            let editandoLlanta = false;
+            let editandoCamion = false;
+            
+            // Elementos del DOM
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            const inventarioTableBody = document.getElementById('inventario-table-body');
+            const flotaTableBody = document.getElementById('flota-table-body');
+            const pedidosTableBody = document.getElementById('pedidos-table-body');
+            const confirmadosTableBody = document.getElementById('confirmados-table-body');
+            
+            const camionEconomicoInput = document.getElementById('camion-economico');
+            const camionInfoDiv = document.getElementById('camion-info');
+            const camionUnidadP = document.getElementById('camion-unidad');
+            const camionCargaP = document.getElementById('camion-carga');
+            const camionVolumenP = document.getElementById('camion-volumen');
+            const camionPlacasP = document.getElementById('camion-placas');
+            const camionAsignadoP = document.getElementById('camion-asignado');
+            
+            const codigoLlantaInput = document.getElementById('codigo-llanta');
+            const descripcionLlantaInput = document.getElementById('descripcion-llanta');
+            const cantidadLlantaInput = document.getElementById('cantidad-llanta');
+            const pesoLlantaInput = document.getElementById('peso-llanta');
+            const valorLlantaInput = document.getElementById('valor-llanta');
+            
+            const totalCantidadP = document.getElementById('total-cantidad');
+            const totalVolumenP = document.getElementById('total-volumen');
+            const totalPesoP = document.getElementById('total-peso');
+            const totalValorP = document.getElementById('total-valor');
+            
+            const agregarPedidoBtn = document.getElementById('agregar-pedido');
+            const aceptarPedidoBtn = document.getElementById('aceptar-pedido');
+            
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalLlanta = document.getElementById('modal-llanta');
+            const modalCamion = document.getElementById('modal-camion');
+            
+            // Inicializar gráficos
+            const cargaChart = new Chart(
+                document.getElementById('carga-chart'),
+                {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Usado', 'Disponible'],
+                        datasets: [{
+                            data: [0, 100],
+                            backgroundColor: ['#22c55e', '#d1d5db'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        cutout: '80%',
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            );
+            
+            const volumenChart = new Chart(
+                document.getElementById('volumen-chart'),
+                {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Usado', 'Disponible'],
+                        datasets: [{
+                            data: [0, 100],
+                            backgroundColor: ['#f87171', '#60a5fa'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        cutout: '80%',
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            );
+
+            // Funciones de utilidad
+            function formatCurrency(value) {
+                return '$' + parseFloat(value).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+            }
+            
+            function showAlert(message, type = 'success') {
+                const alert = document.createElement('div');
+                alert.className = `fixed top-4 right-4 px-6 py-3 rounded-md shadow-md text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`;
+                alert.textContent = message;
+                document.body.appendChild(alert);
+                
+                setTimeout(() => {
+                    alert.remove();
+                }, 3000);
+            }
+            
+            // Funciones para manejar pestañas
+            function showTab(tabId) {
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                document.getElementById(tabId + '-content').classList.remove('hidden');
+                
+                tabButtons.forEach(button => {
+                    button.classList.remove('border-blue-600', 'text-blue-600');
+                    button.classList.add('text-gray-500');
+                });
+                
+                document.getElementById('tab-' + tabId).classList.add('border-blue-600', 'text-blue-600');
+                document.getElementById('tab-' + tabId).classList.remove('text-gray-500');
+            }
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.id.replace('tab-', '');
+                    showTab(tabId);
+                });
+            });
+            
+            // Funciones para inventario
+            function renderInventario() {
+                inventarioTableBody.innerHTML = '';
+                
+                inventario.forEach(llanta => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">${llanta.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${llanta.descripcion}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${llanta.peso} kg</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${llanta.volumen} m³</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${formatCurrency(llanta.valor)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="edit-llanta text-blue-600 hover:text-blue-800 mr-2" data-id="${llanta.id}">Editar</button>
+                            <button class="delete-llanta text-red-600 hover:text-red-800" data-id="${llanta.id}">Eliminar</button>
+                        </td>
+                    `;
+                    
+                    inventarioTableBody.appendChild(row);
+                });
+                
+                // Agregar eventos a los botones
+                document.querySelectorAll('.edit-llanta').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        editLlanta(id);
+                    });
+                });
+                
+                document.querySelectorAll('.delete-llanta').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        deleteLlanta(id);
+                    });
+                });
+            }
+            
+            function addLlanta(e) {
+                e.preventDefault();
+                
+                const id = document.getElementById('modal-llanta-id').value;
+                const descripcion = document.getElementById('modal-llanta-descripcion').value;
+                const peso = parseFloat(document.getElementById('modal-llanta-peso').value);
+                const volumen = parseFloat(document.getElementById('modal-llanta-volumen').value);
+                const valor = parseFloat(document.getElementById('modal-llanta-valor').value.replace(/[^0-9.-]+/g, ''));
+                
+                if (!id || !descripcion || isNaN(peso) || isNaN(volumen) || isNaN(valor)) {
+                    showAlert('Todos los campos son requeridos', 'error');
+                    return;
+                }
+                
+                if (editandoLlanta) {
+                    // Editar llanta existente
+                    const index = inventario.findIndex(llanta => llanta.id === editandoLlanta);
+                    if (index !== -1) {
+                        inventario[index] = { id, descripcion, peso, volumen, valor };
+                        showAlert('Llanta actualizada correctamente');
+                    }
+                    editandoLlanta = false;
+                } else {
+                    // Verificar si el ID ya existe
+                    if (inventario.some(llanta => llanta.id === id)) {
+                        showAlert('El ID de la llanta ya existe', 'error');
+                        return;
+                    }
+                    
+                    // Agregar nueva llanta
+                    inventario.push({ id, descripcion, peso, volumen, valor });
+                    showAlert('Llanta agregada correctamente');
+                }
+                
+                closeModal();
+                renderInventario();
+            }
+            
+            function editLlanta(id) {
+                const llanta = inventario.find(llanta => llanta.id === id);
+                if (llanta) {
+                    document.getElementById('modal-llanta-title').textContent = 'Editar Llanta';
+                    document.getElementById('modal-llanta-id').value = llanta.id;
+                    document.getElementById('modal-llanta-descripcion').value = llanta.descripcion;
+                    document.getElementById('modal-llanta-peso').value = llanta.peso;
+                    document.getElementById('modal-llanta-volumen').value = llanta.volumen;
+                    document.getElementById('modal-llanta-valor').value = llanta.valor;
+                    
+                    editandoLlanta = id;
+                    document.getElementById('modal-llanta-id').readOnly = true;
+                    
+                    openModal('modal-llanta');
+                }
+            }
+            
+            function deleteLlanta(id) {
+                if (confirm('¿Estás seguro de eliminar esta llanta?')) {
+                    inventario = inventario.filter(llanta => llanta.id !== id);
+                    renderInventario();
+                    showAlert('Llanta eliminada correctamente');
+                }
+            }
+            
+            // Funciones para flota
+            function renderFlota() {
+                flotaTableBody.innerHTML = '';
+                
+                flota.forEach(camion => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.economico}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.unidad}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.asignado}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.modelo}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.placas}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.ubicacion}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.carga} kg</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${camion.volumen} m³</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="edit-camion text-blue-600 hover:text-blue-800 mr-2" data-economico="${camion.economico}">Editar</button>
+                            <button class="delete-camion text-red-600 hover:text-red-800" data-economico="${camion.economico}">Eliminar</button>
+                        </td>
+                    `;
+                    
+                    flotaTableBody.appendChild(row);
+                });
+                
+                // Agregar eventos a los botones
+                document.querySelectorAll('.edit-camion').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const economico = this.getAttribute('data-economico');
+                        editCamion(economico);
+                    });
+                });
+                
+                document.querySelectorAll('.delete-camion').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const economico = this.getAttribute('data-economico');
+                        deleteCamion(economico);
+                    });
+                });
+            }
+            
+            function addCamion(e) {
+                e.preventDefault();
+                
+                const economico = document.getElementById('modal-camion-economico').value;
+                const unidad = document.getElementById('modal-camion-unidad').value;
+                const asignado = document.getElementById('modal-camion-asignado').value;
+                const modelo = document.getElementById('modal-camion-modelo').value;
+                const placas = document.getElementById('modal-camion-placas').value;
+                const ubicacion = document.getElementById('modal-camion-ubicacion').value;
+                const carga = parseFloat(document.getElementById('modal-camion-carga').value);
+                const volumen = parseFloat(document.getElementById('modal-camion-volumen').value);
+                
+                if (!economico || !unidad || !asignado || !modelo || !placas || !ubicacion || isNaN(carga) || isNaN(volumen)) {
+                    showAlert('Todos los campos son requeridos', 'error');
+                    return;
+                }
+                
+                if (editandoCamion) {
+                    // Editar camión existente
+                    const index = flota.findIndex(camion => camion.economico === editandoCamion);
+                    if (index !== -1) {
+                        flota[index] = { economico, unidad, asignado, modelo, placas, ubicacion, carga, volumen };
+                        showAlert('Camión actualizado correctamente');
+                    }
+                    editandoCamion = false;
+                } else {
+                    // Verificar si el económico ya existe
+                    if (flota.some(camion => camion.economico === economico)) {
+                        showAlert('El número económico del camión ya existe', 'error');
+                        return;
+                    }
+                    
+                    // Agregar nuevo camión
+                    flota.push({ economico, unidad, asignado, modelo, placas, ubicacion, carga, volumen });
+                    showAlert('Camión agregado correctamente');
+                }
+                
+                closeModal();
+                renderFlota();
+            }
+            
+            function editCamion(economico) {
+                const camion = flota.find(camion => camion.economico === economico);
+                if (camion) {
+                    document.getElementById('modal-camion-title').textContent = 'Editar Camión';
+                    document.getElementById('modal-camion-economico').value = camion.economico;
+                    document.getElementById('modal-camion-unidad').value = camion.unidad;
+                    document.getElementById('modal-camion-asignado').value = camion.asignado;
+                    document.getElementById('modal-camion-modelo').value = camion.modelo;
+                    document.getElementById('modal-camion-placas').value = camion.placas;
+                    document.getElementById('modal-camion-ubicacion').value = camion.ubicacion;
+                    document.getElementById('modal-camion-carga').value = camion.carga;
+                    document.getElementById('modal-camion-volumen').value = camion.volumen;
+                    
+                    editandoCamion = economico;
+                    document.getElementById('modal-camion-economico').readOnly = true;
+                    
+                    openModal('modal-camion');
+                }
+            }
+            
+            function deleteCamion(economico) {
+                if (confirm('¿Estás seguro de eliminar este camión?')) {
+                    flota = flota.filter(camion => camion.economico !== economico);
+                    renderFlota();
+                    showAlert('Camión eliminado correctamente');
+                }
+            }
+            
+            // Funciones para pedidos
+            function buscarCamion() {
+                const economico = camionEconomicoInput.value;
+                if (!economico) return;
+                
+                const camion = flota.find(camion => camion.economico === economico);
+                if (camion) {
+                    pedidoActual.camion = camion;
+                    
+                    camionUnidadP.textContent = camion.unidad;
+                    camionCargaP.textContent = `${camion.carga} kg`;
+                    camionVolumenP.textContent = `${camion.volumen} m³`;
+                    camionPlacasP.textContent = camion.placas;
+                    camionAsignadoP.textContent = camion.asignado;
+                    
+                    camionInfoDiv.classList.remove('hidden');
+                } else {
+                    showAlert('No se encontró un camión con ese número económico', 'error');
+                }
+            }
+            
+            function buscarLlanta() {
+                const codigo = codigoLlantaInput.value;
+                if (!codigo) return;
+                
+                const llanta = inventario.find(llanta => llanta.id === codigo);
+                if (llanta) {
+                    descripcionLlantaInput.value = llanta.descripcion;
+                    pesoLlantaInput.value = llanta.peso;
+                    valorLlantaInput.value = formatCurrency(llanta.valor);
+                    
+                    // Asignar volumen a la llanta si no lo tiene
+                    if (!llanta.volumen) {
+                        llanta.volumen = 0;
+                    }
+                } else {
+                    showAlert('No se encontró una llanta con ese código', 'error');
+                }
+            }
+            
+            function agregarAlPedido() {
+                if (!pedidoActual.camion) {
+                    showAlert('Primero seleccione un camión', 'error');
+                    return;
+                }
+                
+                const codigo = codigoLlantaInput.value;
+                if (!codigo) {
+                    showAlert('Ingrese un código de llanta', 'error');
+                    return;
+                }
+                
+                const cantidad = parseInt(cantidadLlantaInput.value);
+                if (isNaN(cantidad) || cantidad <= 0) {
+                    showAlert('Ingrese una cantidad válida', 'error');
+                    return;
+                }
+                
+                const llanta = inventario.find(llanta => llanta.id === codigo);
+                if (!llanta) {
+                    showAlert('Llanta no encontrada', 'error');
+                    return;
+                }
+                
+                // Verificar si la llanta ya está en el pedido
+                const index = pedidoActual.llantas.findIndex(item => item.codigo === codigo);
+                
+                if (index !== -1) {
+                    // Actualizar cantidad
+                    pedidoActual.llantas[index].cantidad += cantidad;
+                } else {
+                    // Agregar nueva llanta al pedido
+                    pedidoActual.llantas.push({
+                        codigo,
+                        descripcion: llanta.descripcion,
+                        cantidad,
+                        peso: llanta.peso,
+                        volumen: llanta.volumen,
+                        valor: parseFloat(llanta.valor)
+                    });
+                }
+                
+                // Actualizar totales
+                calcularTotales();
+                renderPedido();
+                actualizarGraficas();
+                
+                // Limpiar campos
+                codigoLlantaInput.value = '';
+                descripcionLlantaInput.value = '';
+                cantidadLlantaInput.value = '';
+                pesoLlantaInput.value = '';
+                valorLlantaInput.value = '';
+            }
+            
+            function calcularTotales() {
+                pedidoActual.totalCantidad = 0;
+                pedidoActual.totalPeso = 0;
+                pedidoActual.totalVolumen = 0;
+                pedidoActual.totalValor = 0;
+                
+                pedidoActual.llantas.forEach(item => {
+                    pedidoActual.totalCantidad += item.cantidad;
+                    pedidoActual.totalPeso += item.peso * item.cantidad;
+                    pedidoActual.totalVolumen += item.volumen * item.cantidad;
+                    pedidoActual.totalValor += item.valor * item.cantidad;
+                });
+                
+                totalCantidadP.textContent = pedidoActual.totalCantidad;
+                totalPesoP.textContent = `${pedidoActual.totalPeso.toFixed(2)} kg`;
+                totalVolumenP.textContent = `${pedidoActual.totalVolumen.toFixed(2)} m³`;
+                totalValorP.textContent = formatCurrency(pedidoActual.totalValor);
+            }
+            
+            function renderPedido() {
+                pedidosTableBody.innerHTML = '';
+                
+                pedidoActual.llantas.forEach(item => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">${item.codigo}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.descripcion}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.cantidad}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${(item.volumen * item.cantidad).toFixed(2)} m³</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${(item.peso * item.cantidad).toFixed(2)} kg</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${formatCurrency(item.valor * item.cantidad)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="quitar-pedido text-red-600 hover:text-red-800" data-codigo="${item.codigo}">Quitar</button>
+                        </td>
+                    `;
+                    
+                    pedidosTableBody.appendChild(row);
+                });
+                
+                // Agregar eventos a los botones
+                document.querySelectorAll('.quitar-pedido').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const codigo = this.getAttribute('data-codigo');
+                        quitarDelPedido(codigo);
+                    });
+                });
+            }
+            
+            function quitarDelPedido(codigo) {
+                pedidoActual.llantas = pedidoActual.llantas.filter(item => item.codigo !== codigo);
+                calcularTotales();
+                renderPedido();
+                actualizarGraficas();
+            }
+            
+            function actualizarGraficas() {
+                if (!pedidoActual.camion) return;
+                
+                // Actualizar gráfico de carga
+                const cargaUsada = pedidoActual.totalPeso;
+                const cargaDisponible = pedidoActual.camion.carga - cargaUsada;
+                
+                if (cargaUsada > pedidoActual.camion.carga) {
+                    showAlert('¡Advertencia! El camión ha excedido su capacidad de carga', 'error');
+                }
+                
+                cargaChart.data.datasets[0].data = [cargaUsada, Math.max(0, cargaDisponible)];
+                cargaChart.update();
+                
+                // Actualizar gráfico de volumen
+                const volumenUsado = pedidoActual.totalVolumen;
+                const volumenDisponible = pedidoActual.camion.volumen - volumenUsado;
+                
+                if (volumenUsado > pedidoActual.camion.volumen) {
+                    showAlert('¡Advertencia! El camión ha excedido su capacidad de volumen', 'error');
+                }
+                
+                volumenChart.data.datasets[0].data = [volumenUsado, Math.max(0, volumenDisponible)];
+                volumenChart.update();
+            }
+            
+            function aceptarPedido() {
+                if (!pedidoActual.camion) {
+                    showAlert('Primero seleccione un camión', 'error');
+                    return;
+                }
+                
+                if (pedidoActual.llantas.length === 0) {
+                    showAlert('No hay llantas en el pedido', 'error');
+                    return;
+                }
+                
+                // Verificar que no se excedan las capacidades
+                if (pedidoActual.totalPeso > pedidoActual.camion.carga || pedidoActual.totalVolumen > pedidoActual.camion.volumen) {
+                    showAlert('El pedido excede la capacidad del camión. Ajuste las cantidades', 'error');
+                    return;
+                }
+                
+                // Crear resumen de llantas
+                const llantasResumen = pedidoActual.llantas.map(item => ({
+                    codigo: item.codigo,
+                    cantidad: item.cantidad
+                }));
+                
+                // Agregar a pedidos confirmados
+                pedidosConfirmados.push({
+                    camion: pedidoActual.camion.economico,
+                    llantas: llantasResumen,
+                    volumen: pedidoActual.totalVolumen,
+                    peso: pedidoActual.totalPeso,
+                    valor: pedidoActual.totalValor
+                });
+                
+                // Limpiar pedido actual
+                pedidoActual = {
+                    camion: null,
+                    llantas: [],
+                    totalCantidad: 0,
+                    totalVolumen: 0,
+                    totalPeso: 0,
+                    totalValor: 0
+                };
+                
+                // Actualizar UI
+                camionEconomicoInput.value = '';
+                camionInfoDiv.classList.add('hidden');
+                codigoLlantaInput.value = '';
+                descripcionLlantaInput.value = '';
+                cantidadLlantaInput.value = '';
+                pesoLlantaInput.value = '';
+                valorLlantaInput.value = '';
+                
+                totalCantidadP.textContent = '0';
+                totalPesoP.textContent = '0 kg';
+                totalVolumenP.textContent = '0 m³';
+                totalValorP.textContent = '$0.00';
+                
+                pedidosTableBody.innerHTML = '';
+                
+                // Actualizar gráficos
+                cargaChart.data.datasets[0].data = [0, 100];
+                cargaChart.update();
+                
+                volumenChart.data.datasets[0].data = [0, 100];
+                volumenChart.update();
+                
+                // Actualizar tabla de confirmados
+                renderConfirmados();
+                
+                showAlert('Pedido confirmado correctamente');
+            }
+            
+            function renderConfirmados() {
+                confirmadosTableBody.innerHTML = '';
+                
+                pedidosConfirmados.forEach((pedido, index) => {
+                    const row = document.createElement('tr');
+                    
+                    // Formatear lista de llantas
+                    const llantasText = pedido.llantas.map(llanta => 
+                        `${llanta.codigo} (${llanta.cantidad})`
+                    ).join(', ');
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${pedido.camion}<br>
+                            <span class="text-sm text-gray-500">${flota.find(c => c.economico === pedido.camion)?.asignado || 'N/A'}</span>
+                        </td>
+                        <td class="px-6 py-4">${llantasText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${pedido.volumen.toFixed(2)} m³</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${pedido.peso.toFixed(2)} kg</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${formatCurrency(pedido.valor)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="cancelar-pedido text-red-600 hover:text-red-800" data-index="${index}">Cancelar</button>
+                        </td>
+                    `;
+                    
+                    confirmadosTableBody.appendChild(row);
+                });
+                
+                // Agregar eventos a los botones
+                document.querySelectorAll('.cancelar-pedido').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        cancelarPedido(index);
+                    });
+                });
+            }
+            
+            function cancelarPedido(index) {
+                if (confirm('¿Estás seguro de cancelar este pedido?')) {
+                    pedidosConfirmados.splice(index, 1);
+                    renderConfirmados();
+                    showAlert('Pedido cancelado correctamente');
+                }
+            }
+            
+            // Funciones para modales
+            function openModal(modalId) {
+                document.getElementById(modalId).classList.remove('hidden');
+                modalOverlay.classList.remove('hidden');
+            }
+            
+            function closeModal() {
+                document.querySelectorAll('.modal-container').forEach(modal => {
+                    modal.classList.add('hidden');
+                });
+                modalOverlay.classList.add('hidden');
+                
+                // Resetear campos de formularios
+                if (modalLlanta.classList.contains('hidden')) {
+                    document.getElementById('modal-llanta-id').value = '';
+                    document.getElementById('modal-llanta-descripcion').value = '';
+                    document.getElementById('modal-llanta-peso').value = '';
+                    document.getElementById('modal-llanta-volumen').value = '';
+                    document.getElementById('modal-llanta-valor').value = '';
+                    document.getElementById('modal-llanta-id').readOnly = false;
+                }
+                
+                if (modalCamion.classList.contains('hidden')) {
+                    document.getElementById('modal-camion-economico').value = '';
+                    document.getElementById('modal-camion-unidad').value = '';
+                    document.getElementById('modal-camion-asignado').value = '';
+                    document.getElementById('modal-camion-modelo').value = '';
+                    document.getElementById('modal-camion-placas').value = '';
+                    document.getElementById('modal-camion-ubicacion').value = '';
+                    document.getElementById('modal-camion-carga').value = '';
+                    document.getElementById('modal-camion-volumen').value = '';
+                    document.getElementById('modal-camion-economico').readOnly = false;
+                }
+            }
+            
+            // Event listeners
+            document.getElementById('add-llanta').addEventListener('click', function() {
+                document.getElementById('modal-llanta-title').textContent = 'Agregar Llanta';
+                editandoLlanta = false;
+                openModal('modal-llanta');
+            });
+            
+            document.getElementById('add-camion').addEventListener('click', function() {
+                document.getElementById('modal-camion-title').textContent = 'Agregar Camión';
+                editandoCamion = false;
+                openModal('modal-camion');
+            });
+            
+            document.getElementById('guardar-llanta').addEventListener('click', addLlanta);
+            document.getElementById('guardar-camion').addEventListener('click', addCamion);
+            
+            document.getElementById('cancelar-llanta').addEventListener('click', closeModal);
+            document.getElementById('cancelar-camion').addEventListener('click', closeModal);
+            
+            modalOverlay.addEventListener('click', closeModal);
+            
+            camionEconomicoInput.addEventListener('change', buscarCamion);
+            codigoLlantaInput.addEventListener('change', buscarLlanta);
+            
+            agregarPedidoBtn.addEventListener('click', agregarAlPedido);
+            aceptarPedidoBtn.addEventListener('click', aceptarPedido);
+            // ...existing code...
+
+document.getElementById('reload-inventario').addEventListener('click', async function() {
+    await cargarDatos();
+    showAlert('Inventario recargado desde la hoja de cálculo');
+});
+
+// ...existing code...
+            // Datos iniciales para prueba
+            // SheetDB API URL
+            const SHEETDB_URL = 'https://sheetdb.io/api/v1/sy3h4aux0biju';
+
+            // Utilidad para obtener datos de una hoja
+            async function fetchSheet(tab) {
+                const res = await fetch(`${SHEETDB_URL}/search?sheet=${tab}`);
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            }
+
+            // Utilidad para agregar registro
+            async function addSheetRow(tab, row) {
+                await fetch(`${SHEETDB_URL}?sheet=${tab}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: [row] })
+                });
+            }
+
+            // Utilidad para editar registro
+            async function editSheetRow(tab, key, value, row) {
+                await fetch(`${SHEETDB_URL}/${key}/${value}?sheet=${tab}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: row })
+                });
+            }
+
+            // Utilidad para eliminar registro
+            async function deleteSheetRow(tab, key, value) {
+                await fetch(`${SHEETDB_URL}/${key}/${value}?sheet=${tab}`, {
+                    method: 'DELETE' });
+            }
+
+            // Cargar datos iniciales desde SheetDB
+            async function cargarDatos() {
+                inventario = await fetchSheet('inventario');
+                flota = await fetchSheet('flota');
+                pedidosConfirmados = await fetchSheet('confirmados');
+                renderInventario();
+                renderFlota();
+                renderConfirmados();
+            }
+
+            // Adaptar funciones de agregar/editar/eliminar para usar SheetDB
+            // ...existing code...
+
+            // Reemplazar render inicial por carga desde SheetDB
+            cargarDatos();
+            showTab('inventario');
+        });
+    </script>
+</body>
+</html>
+
