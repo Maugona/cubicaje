@@ -1373,6 +1373,14 @@ async function guardarFacturas() {
         alert('Error al guardar: ' + e.message);
     }
 }
+window.onload = function() {
+  console.log("pdfjsLib:", window.pdfjsLib);
+  if (window.pdfjsLib) {
+    alert("PDF.js cargado correctamente");
+  } else {
+    alert("PDF.js NO se cargó");
+  }
+};
 </script>
 </body>
 </html>
