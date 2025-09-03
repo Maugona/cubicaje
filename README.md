@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
- <script src="https://unpkg.com/pdfjs-dist@4.0.379/build/pdf.min.js"></script>
+<script src="https://unpkg.com/pdfjs-dist@4.0.379/build/pdf.min.js"></script>
 <script>
-  if (typeof window.pdfjsLib === 'undefined' && typeof window.pdfjsDistBuildPdf !== 'undefined') {
-    window.pdfjsLib = window.pdfjsDistBuildPdf;
-  }
+  window.pdfjsLib = window.pdfjsLib || window.pdfjsDistBuildPdf || window.pdfjsLibDefault;
 </script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <!-- ...el resto de tu head... -->
