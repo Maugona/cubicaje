@@ -381,6 +381,37 @@
 
         <h3>Agregar Llanta al Pedido</h3>
 
+        <!-- Formulario para agregar llanta individual al pedido (necesario para las funciones JS) -->
+        <div style="margin-bottom:12px; display:flex; gap:8px; align-items:end; flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;">
+                <label for="pedidoCodigoLlanta">Código / Clave</label>
+                <input type="text" id="pedidoCodigoLlanta" placeholder="Código o clave" oninput="autoCompletarLlantaPedidoPorCodigo()" />
+            </div>
+            <div style="display:flex;flex-direction:column;">
+                <label for="pedidoDescripcionLlantaInput">Descripción</label>
+                <input type="text" id="pedidoDescripcionLlantaInput" placeholder="Descripción" oninput="autoCompletarLlantaPedidoPorDescripcion()" />
+            </div>
+            <div style="display:flex;flex-direction:column; width:90px;">
+                <label for="pedidoCantidadLlanta">Cantidad</label>
+                <input type="number" id="pedidoCantidadLlanta" value="1" min="1" onchange="calcularTotalesPedido()" />
+            </div>
+            <div style="display:flex;flex-direction:column;">
+                <label>Peso total</label>
+                <div id="pedidoPesoLlanta">0</div>
+            </div>
+            <div style="display:flex;flex-direction:column;">
+                <label>Volumen total</label>
+                <div id="pedidoVolumenLlanta">0</div>
+            </div>
+            <div style="display:flex;flex-direction:column;">
+                <label>Valor unitario</label>
+                <div id="pedidoValorUnitarioLlanta">0</div>
+            </div>
+            <div>
+                <button class="primary" onclick="agregarPedido()">Agregar al pedido</button>
+            </div>
+        </div>
+
         <!-- Campo para agregar bloque por folio -->
         <div style="margin-bottom: 10px;">
              <label for="inputFolioFacturaPedido"><b>Folio de Factura (autoagregar bloque):</b></label>
@@ -497,6 +528,45 @@
     let pedidosConfirmados = [];
     let pedidosEnCurso = [];
     let pedidoCamion = null;
+    // Helper: parsea valores que vienen de la hoja y devuelve número seguro (0 si no es numérico)
+    function safeNum(v) {
+        if (v === null || v === undefined) return 0;
+        let s = String(v).trim();
+        if (s === '') return 0;
+        // Quita símbolo de moneda y espacios
+        s = s.replace(/\$/g, '').replace(/\s+/g, '');
+        // Si contiene ambos separadores, asumimos que las comas son separador de miles
+        if (s.includes(',') && s.includes('.')) {
+            s = s.replace(/,/g, '');
+        } else if (s.includes(',') && !s.includes('.')) {
+            // Probablemente usan coma como decimal
+            s = s.replace(/,/g, '.');
+        }
+        // Elimina cualquier resto de comas
+        s = s.replace(/,/g, '');
+        const n = Number(s);
+        return isNaN(n) ? 0 : n;
+    }
+    // Busca una propiedad entre varias alternativas comunes (tolerancia a nombres de columnas)
+    function getField(obj, name) {
+        if (!obj) return undefined;
+        const keys = [name, name.toLowerCase(), name.toUpperCase(), name.charAt(0).toLowerCase() + name.slice(1)];
+        // variantes comunes
+        const variants = {
+            volumen: ['volumen', 'Volumen', 'volumen (m3)', 'Volumen (m3)', 'volume'],
+            peso: ['peso', 'Peso', 'weight', 'Weight'],
+            valor: ['valor', 'Valor', 'precio', 'Precio', 'value']
+        };
+        const list = variants[name] || keys;
+        for (const k of list) {
+            if (k in obj) return obj[k];
+        }
+        // intenta buscar cualquier key que contenga el nombre
+        for (const k of Object.keys(obj)) {
+            if (k.toLowerCase().includes(name.toLowerCase())) return obj[k];
+        }
+        return undefined;
+    }
 
 // Pega aquí:
 async function agregarBloquePorFolioPedido() {
@@ -521,18 +591,18 @@ async function agregarBloquePorFolioPedido() {
             const cantidad = Number(prod.Cantidad) || 1;
             if (pedidoExistente) {
                 pedidoExistente.cantidad += cantidad;
-                pedidoExistente.peso += (+llanta.peso) * cantidad;
-                pedidoExistente.volumen += (+llanta.volumen) * cantidad;
-                pedidoExistente.valor += (+llanta.valor) * cantidad;
+                pedidoExistente.peso += safeNum(getField(llanta,'peso')) * cantidad;
+                pedidoExistente.volumen += safeNum(getField(llanta,'volumen')) * cantidad;
+                pedidoExistente.valor += safeNum(getField(llanta,'valor')) * cantidad;
             } else {
                 pedidosEnCurso.push({
                     clave: llanta.clave,
                     descripcion: llanta.descripcion,
                     linea: llanta.linea || '',
                     cantidad: cantidad,
-                    peso: (+llanta.peso) * cantidad,
-                    volumen: (+llanta.volumen) * cantidad,
-                    valor: (+llanta.valor) * cantidad
+                    peso: safeNum(getField(llanta,'peso')) * cantidad,
+                    volumen: safeNum(getField(llanta,'volumen')) * cantidad,
+                    valor: safeNum(getField(llanta,'valor')) * cantidad
                 });
             }
             agregadas++;
@@ -550,7 +620,7 @@ async function agregarBloquePorFolioPedido() {
     // Abrir y cerrar modales
     function openModal(id) {
         document.getElementById(id).style.display = 'block';
-z    }
+    }
     function closeModal(id) {
         document.getElementById(id).style.display = 'none';
     }
@@ -568,7 +638,7 @@ z    }
     // ---------- Funciones para cargar datos ---------
     async function fetchInventario() {
         try {
-            const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl');
+            const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid');
             if (!res.ok) throw new Error('Error al cargar inventario');
             inventario = await res.json();
             renderInventario();
@@ -578,7 +648,7 @@ z    }
     }
     async function fetchFlota() {
         try {
-            const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl?sheet=flota');
+            const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid?sheet=flota');
             if (!res.ok) throw new Error('Error al cargar flota');
             flota = await res.json();
             renderFlota();
@@ -592,7 +662,7 @@ z    }
     // Función para cargar pedidos confirmados desde hoja
     async function fetchPedidosConfirmados() {
         try {
-            const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl?sheet=confirmados');
+            const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid?sheet=confirmados');
             if (!res.ok) throw new Error('Error al cargar pedidos confirmados');
             pedidosConfirmados = await res.json();
             renderPedidosConfirmados();
@@ -616,54 +686,7 @@ z    }
             if (button.dataset.tab === 'pedidos-confirmados') fetchPedidosConfirmados();
         });
     });
-    
-    async function agregarBloquePorFolioPedido() {
-    const folio = document.getElementById('inputFolioFacturaPedido').value.trim();
-    if (!folio) {
-        alert('Escribe un folio válido.');
-        return;
-    }
-    // Busca el bloque en bloquesFacturas (ya cargados en la pestaña facturas)
-    const bloque = bloquesFacturas.find(b => b.nombre === folio || (b.datos[0]?.Folio === folio));
-    if (!bloque) {
-        alert('No se encontró un bloque con ese folio.');
-        return;
-    }
-    let agregadas = 0;
-    bloque.datos.forEach(prod => {
-        // Busca la llanta en inventario por clave/código
-        const llanta = inventario.find(item => item.clave?.toString() === prod.Código?.toString());
-        if (llanta) {
-            // Verifica si ya está en pedidosEnCurso
-            let pedidoExistente = pedidosEnCurso.find(p => p.clave === llanta.clave);
-            const cantidad = Number(prod.Cantidad) || 1;
-            if (pedidoExistente) {
-                pedidoExistente.cantidad += cantidad;
-                pedidoExistente.peso += (+llanta.peso) * cantidad;
-                pedidoExistente.volumen += (+llanta.volumen) * cantidad;
-                pedidoExistente.valor += (+llanta.valor) * cantidad;
-            } else {
-                pedidosEnCurso.push({
-                    clave: llanta.clave,
-                    descripcion: llanta.descripcion,
-                    linea: llanta.linea || '',
-                    cantidad: cantidad,
-                    peso: (+llanta.peso) * cantidad,
-                    volumen: (+llanta.volumen) * cantidad,
-                    valor: (+llanta.valor) * cantidad
-                });
-            }
-            agregadas++;
-        }
-    });
-    if (agregadas > 0) {
-        renderPedidosActuales();
-        actualizarGraficas();
-        alert(`Se agregaron ${agregadas} llantas del bloque "${folio}" al pedido.`);
-    } else {
-        alert('No se encontró ninguna llanta del bloque en el inventario.');
-    }
-}
+    // (Se eliminó la definición duplicada de agregarBloquePorFolioPedido)
 // ...existing code...
 function renderInventario() {
     const tbody = document.querySelector('#tablaInventario tbody');
@@ -671,16 +694,32 @@ function renderInventario() {
     inventario.forEach(llanta => {
         const tr = document.createElement('tr');
         // Si volumenGrande está marcado o volumen > 2, fondo azul claro
-        if (llanta.volumenGrande || (+llanta.volumen > 2)) {
+        if (llanta.volumenGrande || (safeNum(llanta.volumen) > 2)) {
             tr.style.background = '#cce6ff';
         }
+        const pesoMostrar = (() => {
+            const v = getField(llanta, 'peso');
+            const n = safeNum(v);
+            return (v === undefined || v === null || String(v).trim() === '') ? '-' : n.toFixed(3);
+        })();
+        const volumenMostrar = (() => {
+            const v = getField(llanta, 'volumen');
+            const n = safeNum(v);
+            return (v === undefined || v === null || String(v).trim() === '') ? '-' : n.toFixed(3);
+        })();
+        const valorMostrar = (() => {
+            const v = getField(llanta, 'valor');
+            const n = safeNum(v);
+            return (v === undefined || v === null || String(v).trim() === '') ? '-' : '$' + n.toFixed(2);
+        })();
+
         tr.innerHTML = `
             <td>${llanta.clave}</td>
             <td>${llanta.descripcion}</td>
             <td>${llanta.linea || ''}</td>
-            <td>${(+llanta.peso).toFixed(3)}</td>
-            <td>${(+llanta.volumen).toFixed(3)}</td>
-            <td>$${(+llanta.valor).toFixed(3)}</td>
+            <td>${pesoMostrar}</td>
+            <td>${volumenMostrar}</td>
+            <td>${valorMostrar}</td>
             <td>
                 <button onclick="editarLlanta('${llanta.clave}')">Editar</button>
                 <button onclick="eliminarLlanta('${llanta.clave}')">Eliminar</button>
@@ -695,7 +734,7 @@ function renderInventario() {
    async function eliminarLlanta(clave) {
      if (!confirm('¿Seguro que deseas eliminar esta llanta?')) return;
      try {
-       const res = await fetch(`https://sheetdb.io/api/v1/y7fxgl7z2bskl/clave/${clave}`, {
+       const res = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/clave/${clave}`, {
          method: 'DELETE'
       });
       if (!res.ok) throw new Error('No se pudo eliminar');
@@ -726,97 +765,136 @@ function renderInventario() {
 // --- PEGA AQUÍ ---
 // ...existing code...
 async function calcularVolumenInventario() {
-    // Equivalencias para anchos tipo "L"
-    const equivalenciasL = {
-        "11L": 0.280, "12.5L": 0.320, "13.6L": 0.345, "14.9L": 0.380, "16.9L": 0.430, "19.5L": 0.495, "21L": 0.533, "23.1L": 0.587
-    };
     inventario.sort((a, b) => Number(a.clave) - Number(b.clave));
     let noCalculadas = [];
+    const updatedRows = []; // {clave, volumen}
+    const failedRows = []; // {clave, descripcion, error}
+    const margenLogistico = 1.40; // 40% extra por logística
     for (const llanta of inventario) {
-        let ancho, perfil, rin;
-        let desc = llanta.descripcion.replace(/[()]/g, '').toUpperCase();
-        // Limpia letras irrelevantes
-        desc = desc.replace(/\b(LT|XL|RF|M\+S|TL|TT|AT|MT|HT|SUV|IND|AGRO|G2|L2|E3|L3|R1|R4|R2|R3|R5|G3|G4|G5|F2|F3|F4|F5|CAMARA|REAR|FRONT|TUBELESS|TUBETYPE)\b/g, '');
-        desc = desc.replace(/\s{2,}/g, ' ').trim();
+        if (!llanta.volumen || Number(llanta.volumen) === 0) {
+            let ancho, perfil, rin;
+            let desc = (llanta.descripcion || '').replace(/[()]/g, '').toUpperCase();
 
-        let m;
-        // 1. 185 60 R14 o 185/60 R14
-        if ((m = desc.match(/(\d{3})[\/\s\-](\d{2})[\/\s\-]?R?(\d{2,2}\.?\d*)/))) {
-            ancho = Number(m[1]) / 1000;
-            perfil = Number(m[2]) / 100;
-            rin = Number(m[3]);
-        }
-        // 2. 11R22.5, 12R24.5, 295 75 R22.5
-        else if ((m = desc.match(/(\d{2,3})R(\d{2,2}\.?\d*)/))) {
-            ancho = Number(m[1]) / 25.4 / 2;
-            perfil = 0.88;
-            rin = Number(m[2]);
-        }
-        // 3. 31X10.50 R15, 33X12.50 R15
-        else if ((m = desc.match(/(\d{2,3})[Xx](\d{2,3}\.?\d*)\s*R?(\d{2,2})/))) {
-            ancho = Number(m[2]) / 25.4;
-            perfil = 0.88;
-            rin = Number(m[3]);
-        }
-        // 4. 7.50-16, 12.5/80-18, 14.9-24, 12-16.5
-        else if ((m = desc.match(/(\d{1,2}\.?\d*)[\/\-](\d{2,3})[\- ](\d{2,2}\.?\d*)/))) {
-            ancho = Number(m[1]) / 25.4;
-            perfil = Number(m[2]) / 100;
-            rin = Number(m[3]);
-        }
-        // 5. 285/75 R24.5, 295/80 R22.5
-        else if ((m = desc.match(/(\d{3})\/(\d{2})\s*R?(\d{2,2}\.?\d*)/))) {
-            ancho = Number(m[1]) / 1000;
-            perfil = Number(m[2]) / 100;
-            rin = Number(m[3]);
-        }
-        // 6. 14.9-24, 12-16.5 (sin perfil)
-        else if ((m = desc.match(/(\d{1,2}\.?\d*)[\- ](\d{2,2}\.?\d*)/))) {
-            ancho = Number(m[1]) / 25.4;
-            perfil = 0.88;
-            rin = Number(m[2]);
-        }
-        // 7. Agrícola tipo "L" (ej: 11L-16, 19.5L-24, 21L-24)
-        else if ((m = desc.match(/(\d{1,2}\.?\d*L)[\- ](\d{2,2}\.?\d*)/))) {
-            let claveL = m[1];
-            ancho = equivalenciasL[claveL] || 0.30; // Si no está, usa 0.30m como default
-            perfil = 0.88;
-            rin = Number(m[2]);
-        }
-        // 8. Motocicleta tipo 2.50-17, 3.00-18
-        else if ((m = desc.match(/(\d{1,2}\.\d{2})[\- ](\d{2,2})/))) {
-            ancho = Number(m[1]) / 25.4;
-            perfil = 0.88;
-            rin = Number(m[2]);
-        }
-        else {
-            noCalculadas.push(llanta.descripcion);
-            continue;
-        }
+            // 1. 185 60 R14 o 185/60 R14
+            let m = desc.match(/(\d{3})[\/\s\-](\d{2})[\/\s\-]?R?(\d{2,2}\.?\d*)/);
+            if (m) {
+                ancho = Number(m[1]) / 1000; // a metros
+                perfil = Number(m[2]) / 100;
+                rin = Number(m[3]) * 0.0254; // a metros
+            }
+            // 2. 11R22.5, 12R24.5, 295 75 R22.5
+            else if ((m = desc.match(/(\d{2,3})R(\d{2,2}\.?\d*)/))) {
+                ancho = Number(m[1]) * 25.4 / 1000; // pulgadas a metros
+                perfil = 0.80; // asume 80%
+                rin = Number(m[2]) * 0.0254;
+            }
+            // 3. 31X10.50 R15, 33X12.50 R15
+            else if ((m = desc.match(/(\d{2,3})[Xx](\d{2,3}\.?\d*)\s*R?(\d{2,2})/))) {
+                rin = Number(m[1]) * 0.0254;
+                ancho = Number(m[2]) * 25.4 / 1000;
+                perfil = 0.80;
+            }
+            // 4. 7.50-16, 12.5/80-18, 14.9-24, 12-16.5
+            else if ((m = desc.match(/(\d{1,2}\.?\d*)[\/\-](\d{2,3})[\- ](\d{2,2}\.?\d*)/))) {
+                ancho = Number(m[1]) * 25.4 / 1000;
+                perfil = 0.80;
+                rin = Number(m[3]) * 0.0254;
+            }
+            // 5. 285/75 R24.5, 295/80 R22.5
+            else if ((m = desc.match(/(\d{3})\/(\d{2})\s*R?(\d{2,2}\.?\d*)/))) {
+                ancho = Number(m[1]) / 1000;
+                perfil = Number(m[2]) / 100;
+                rin = Number(m[3]) * 0.0254;
+            }
+            // 6. 14.9-24, 12-16.5 (sin perfil)
+            else if ((m = desc.match(/(\d{1,2}\.?\d*)[\- ](\d{2,2}\.?\d*)/))) {
+                ancho = Number(m[1]) * 25.4 / 1000;
+                perfil = 0.80;
+                rin = Number(m[2]) * 0.0254;
+            }
+            else {
+                noCalculadas.push(llanta.descripcion || '(sin descripción)');
+                continue;
+            }
 
-        // Cálculo SIEMPRE
-        const diam_rin = rin * 25.4 / 1000;
-        const altura_flanco = perfil * ancho;
-        const diam_externo = diam_rin + 2 * altura_flanco;
-        const margenLogistico = 1.4; // 40% más
-        const volumen = diam_externo * diam_externo * ancho * margenLogistico;
-        // ...existing code...
+            // Altura flanco
+            let alturaFlanco = perfil * ancho;
+            // Diámetro externo
+            let diametroExterno = rin + 2 * alturaFlanco;
 
-        // Actualiza en SheetDB
-        await fetch(`https://sheetdb.io/api/v1/y7fxgl7z2bskl/clave/${llanta.clave}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: { volumen: volumen.toFixed(4) } })
-        });
+            // Volumen tipo cubicaje (como en la imagen), con margen logístico
+            let volumen_m3 = diametroExterno * diametroExterno * ancho * margenLogistico;
 
-        llanta.volumen = volumen.toFixed(4);
-        llanta.volumenGrande = volumen > 2 ? true : false;
+            // Actualiza en SheetDB (usa row_id cuando esté disponible). Si falla, intenta obtener row_id y reintentar.
+            const newVol = volumen_m3.toFixed(4);
+            try {
+                if (llanta.row_id) {
+                    console.log('Patch por row_id', llanta.row_id, 'clave', llanta.clave, '->', newVol);
+                    const res = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/row_id/${encodeURIComponent(llanta.row_id)}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: { volumen: newVol } })
+                    });
+                    if (!res.ok) throw new Error('PATCH falló con status ' + res.status);
+                } else {
+                    // Intenta obtener la fila para conocer su row_id
+                    const key = encodeURIComponent(String(llanta.clave));
+                    console.log('Buscando row para clave', llanta.clave);
+                    const getRes = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/clave/${key}`);
+                    if (!getRes.ok) throw new Error('GET row por clave falló con status ' + getRes.status);
+                    const rows = await getRes.json();
+                    if (Array.isArray(rows) && rows.length > 0 && rows[0].row_id) {
+                        const rid = rows[0].row_id;
+                        console.log('Obtuvo row_id', rid, 'para clave', llanta.clave, '- realizando PATCH');
+                        const res2 = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/row_id/${encodeURIComponent(rid)}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ data: { volumen: newVol } })
+                        });
+                        if (!res2.ok) throw new Error('PATCH (por row_id) falló con status ' + res2.status);
+                    } else {
+                        throw new Error('No se encontró row_id para clave ' + llanta.clave);
+                    }
+                }
+                // Guarda en memoria
+                llanta.volumen = newVol;
+                updatedRows.push({ clave: llanta.clave, volumen: newVol });
+                // Pequeña espera para evitar rate limits
+                await new Promise(r => setTimeout(r, 120));
+            } catch (err) {
+                console.error('No se pudo actualizar volumen para clave', llanta.clave, err);
+                const msg = `${llanta.clave} (${llanta.descripcion || 'sin descripción'}) - ${err.message}`;
+                noCalculadas.push(msg);
+                failedRows.push({ clave: llanta.clave, descripcion: llanta.descripcion || '', error: err.message });
+            }
+        }
     }
     renderInventario();
+
+    // Genera CSV descargable con las filas actualizadas para import manual si las PATCH fallaron
+    if (updatedRows.length > 0) {
+        const csvLines = ['clave,volumen'];
+        updatedRows.forEach(r => csvLines.push(`${JSON.stringify(r.clave)},${r.volumen}`));
+        const csv = csvLines.join('\n');
+        try {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'volumen_updates.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            console.log('CSV con actualizaciones descargado: volumen_updates.csv (contiene', updatedRows.length, 'filas)');
+        } catch (e) {
+            console.warn('No se pudo generar el CSV descargable:', e);
+        }
+    }
     if (noCalculadas.length > 0) {
         alert('No se pudo calcular el volumen de las siguientes llantas:\n' + noCalculadas.slice(0, 10).join('\n') + (noCalculadas.length > 10 ? '\n...y más' : ''));
     } else {
-        alert('Volumen calculado y actualizado para todas las llantas.');
+        alert('Volumen calculado y actualizado para todas las llantas que tenían volumen vacío (con margen de seguridad).');
     }
 }
 // ...existing code...
@@ -829,7 +907,7 @@ async function guardarEdicionLlanta(clave) {
     valor: document.getElementById('editValor').value
   };
   try {
-    const res = await fetch(`https://sheetdb.io/api/v1/y7fxgl7z2bskl/clave/${clave}`, {
+    const res = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/clave/${clave}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: nuevosDatos })
@@ -903,10 +981,10 @@ function searchInventario() {
             return;
         }
 
-        const nuevoDato = { id, descripcion, peso, volumen, valor, "Línea": Línea };
+    const nuevoDato = { id, clave: id, descripcion, peso, volumen, valor, "Línea": Línea };
 
         try {
-            const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl', {
+            const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ data: nuevoDato })
@@ -943,10 +1021,10 @@ function searchInventario() {
     const tbody = document.querySelector('#tablaFlota tbody');
     tbody.innerHTML = '';
     flota.forEach(camion => {   
-        const cargaNum = parseFloat(camion["capacidad de carga (kg)"]);
-        const volumenNum = parseFloat(camion["volumen"]);
-        const cargaMostrar = isNaN(cargaNum) ? '-' : cargaNum.toFixed(3);
-        const volumenMostrar = isNaN(volumenNum) ? '-' : volumenNum.toFixed(3);
+        const cargaNum = safeNum(camion["capacidad de carga (kg)"] || camion.carga);
+        const volumenNum = safeNum(camion["volumen"] || camion.volumen);
+        const cargaMostrar = cargaNum === 0 ? '-' : cargaNum.toFixed(3);
+        const volumenMostrar = volumenNum === 0 ? '-' : volumenNum.toFixed(3);
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${camion.economico || '-'}</td>
@@ -969,7 +1047,7 @@ function searchInventario() {
      async function eliminarCamion(economico) {
        if (!confirm('¿Seguro que deseas eliminar este camión?')) return;
        try {
-         const res = await fetch(`https://sheetdb.io/api/v1/y7fxgl7z2bskl/economico/${economico}?sheet=flota`, {
+         const res = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/economico/${economico}?sheet=flota`, {
            method: 'DELETE'
          });
          if (!res.ok) throw new Error('No se pudo eliminar');
@@ -1003,7 +1081,7 @@ function searchInventario() {
         volumen: document.getElementById('editCamionVolumen').value
       };
       try {
-        const res = await fetch(`https://sheetdb.io/api/v1/y7fxgl7z2bskl/economico/${economico}?sheet=flota`, {
+        const res = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/economico/${economico}?sheet=flota`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: nuevosDatos })
@@ -1059,7 +1137,7 @@ function searchInventario() {
         };
 
         try {
-            const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl?sheet=flota', {
+            const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid?sheet=flota', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ data: nuevoDato })
@@ -1152,9 +1230,9 @@ function searchInventario() {
         const codigo = document.getElementById('pedidoCodigoLlanta').value.trim();
         const llanta = inventario.find(item => item.clave.toString() === codigo);
         if (llanta && cantidad > 0) {
-            document.getElementById('pedidoPesoLlanta').innerText = Number(llanta.peso * cantidad).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('pedidoVolumenLlanta').innerText = Number(llanta.volumen * cantidad).toLocaleString('es-MX', {minimumFractionDigits: 4, maximumFractionDigits: 4});
-            document.getElementById('pedidoValorUnitarioLlanta').innerText = Number(llanta.valor * cantidad).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('pedidoPesoLlanta').innerText = (safeNum(llanta.peso) * cantidad).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('pedidoVolumenLlanta').innerText = (safeNum(llanta.volumen) * cantidad).toLocaleString('es-MX', {minimumFractionDigits: 4, maximumFractionDigits: 4});
+            document.getElementById('pedidoValorUnitarioLlanta').innerText = (safeNum(llanta.valor) * cantidad).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
     }
     function agregarPedido() {
@@ -1173,21 +1251,21 @@ function searchInventario() {
             alert("Llanta no encontrada en inventario.");
             return;
         }
-        const pedidoExistente = pedidosEnCurso.find(p => p.id === llanta.clave);
+    const pedidoExistente = pedidosEnCurso.find(p => p.id === llanta.clave || p.clave === llanta.clave);
         if (pedidoExistente) {
             pedidoExistente.cantidad += cantidad;
-            pedidoExistente.peso += (+llanta.peso * cantidad);
-            pedidoExistente.volumen += (+llanta.volumen * cantidad);
-            pedidoExistente.valor += (+llanta.valor * cantidad);
+                pedidoExistente.peso += safeNum(getField(llanta,'peso')) * cantidad;
+                pedidoExistente.volumen += safeNum(getField(llanta,'volumen')) * cantidad;
+                pedidoExistente.valor += safeNum(getField(llanta,'valor')) * cantidad;
         } else {
             pedidosEnCurso.push({
                 clave: llanta.clave,
                 descripcion: llanta.descripcion,
                 linea: llanta.linea || '',
                 cantidad: cantidad,
-                peso: (+llanta.peso) * cantidad,
-                volumen: (+llanta.volumen) * cantidad,
-                valor: (+llanta.valor) * cantidad
+                    peso: safeNum(getField(llanta,'peso')) * cantidad,
+                    volumen: safeNum(getField(llanta,'volumen')) * cantidad,
+                    valor: safeNum(getField(llanta,'valor')) * cantidad
             });
         }
         renderPedidosActuales();
@@ -1202,9 +1280,9 @@ function searchInventario() {
         // Actualiza los valores
         const llanta = inventario.find(item => item.clave.toString() === pedido.clave);
         pedido.cantidad = nuevaCantidad;
-        pedido.peso = (+llanta.peso) * nuevaCantidad;
-        pedido.volumen = (+llanta.volumen) * nuevaCantidad;
-        pedido.valor = (+llanta.valor) * nuevaCantidad;
+        pedido.peso = safeNum(getField(llanta,'peso')) * nuevaCantidad;
+    pedido.volumen = safeNum(getField(llanta,'volumen')) * nuevaCantidad;
+    pedido.valor = safeNum(getField(llanta,'valor')) * nuevaCantidad;
 
         renderPedidosActuales();
         actualizarGraficas();
@@ -1219,9 +1297,9 @@ function searchInventario() {
                <td>${pedido.descripcion}</td>
                <td>${pedido.linea || ''}</td> 
                <td>${pedido.cantidad}</td>
-               <td>${pedido.volumen.toLocaleString('es-MX', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
-               <td>${pedido.peso.toLocaleString('es-MX', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
-               <td>${pedido.valor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                       <td>${(pedido.volumen || pedido.volumen===0) ? safeNum(pedido.volumen).toLocaleString('es-MX', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-'}</td>
+                       <td>${(pedido.peso || pedido.peso===0) ? safeNum(pedido.peso).toLocaleString('es-MX', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-'}</td>
+                   <td>${(pedido.valor || pedido.valor===0) ? ('$' + safeNum(pedido.valor).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '-'}</td>
                <td>
                    <button onclick="editarPedido(${idx})">Editar</button>
                    <button onclick="quitarPedido(${idx})">Quitar</button>
@@ -1231,10 +1309,10 @@ function searchInventario() {
         });
         let totalCantidad = 0, totalVolumen = 0, totalPeso = 0, totalValor = 0;
         pedidosEnCurso.forEach(p => {
-            totalCantidad += p.cantidad;
-            totalVolumen += p.volumen;
-            totalPeso += p.peso;
-            totalValor += p.valor;
+            totalCantidad += safeNum(p.cantidad);
+            totalVolumen += safeNum(p.volumen);
+            totalPeso += safeNum(p.peso);
+            totalValor += safeNum(p.valor);
         });
       // ...dentro de function renderPedidosActuales()...
     document.getElementById('totalesPedido').innerText = 
@@ -1243,7 +1321,7 @@ function searchInventario() {
     }
     function resetPedidoInputs() {
         document.getElementById('pedidoCodigoLlanta').value = '';
-        document.getElementById('pedidoDescripcionLlanta').innerText = '';
+        document.getElementById('pedidoDescripcionLlantaInput').value = '';
         document.getElementById('pedidoCantidadLlanta').value = 1;
         document.getElementById('pedidoPesoLlanta').innerText = '0';
         document.getElementById('pedidoVolumenLlanta').innerText = '0';
@@ -1280,10 +1358,10 @@ function searchInventario() {
             chartVolumen.data.datasets[0].data = [0, 100];
             chartCarga.data.datasets[0].data = [0, 100];
         } else {
-             let totalVolumen = pedidosEnCurso.reduce((acc, cur) => acc + cur.volumen, 0); // CORREGIDO
-             let totalPeso = pedidosEnCurso.reduce((acc, cur) => acc + cur.peso, 0);
-             let volTotal = +pedidoCamion["volumen"];
-             let pesoTotal = +pedidoCamion["capacidad de carga (kg)"];
+             let totalVolumen = pedidosEnCurso.reduce((acc, cur) => acc + safeNum(cur.volumen), 0);
+             let totalPeso = pedidosEnCurso.reduce((acc, cur) => acc + safeNum(cur.peso), 0);
+             let volTotal = safeNum(pedidoCamion["volumen"] || pedidoCamion.volumen);
+             let pesoTotal = safeNum(pedidoCamion["capacidad de carga (kg)"] || pedidoCamion["carga"] || pedidoCamion.carga);
              chartVolumen.data.datasets[0].data = [Math.min(totalVolumen, volTotal), Math.max(0, volTotal - totalVolumen)];
              chartCarga.data.datasets[0].data = [Math.min(totalPeso, pesoTotal), Math.max(0, pesoTotal - totalPeso)];
         }
@@ -1291,8 +1369,8 @@ function searchInventario() {
     }
 function verificarCapacidad(volumen, peso) {
     if (!pedidoCamion) return;
-    const capVol = +pedidoCamion.volumen;
-    const capPes = +pedidoCamion["capacidad de carga (kg)"];
+    const capVol = safeNum(pedidoCamion.volumen || pedidoCamion["volumen"]);
+    const capPes = safeNum(pedidoCamion["capacidad de carga (kg)"] || pedidoCamion.carga || pedidoCamion["carga"]);
     const volumenPercent = (volumen / capVol) * 100,
         pesoPercent = (peso / capPes) * 100;
 
@@ -1322,10 +1400,10 @@ function verificarCapacidad(volumen, peso) {
             return;
         }
 
-        let totalVolumen = pedidosEnCurso.reduce((acc, cur) => acc + cur.volumen, 0);
-        let totalPeso = pedidosEnCurso.reduce((acc, cur) => acc + cur.peso, 0);
-        let totalValor = pedidosEnCurso.reduce((acc, cur) => acc + cur.valor, 0);
-        let totalCantidad = pedidosEnCurso.reduce((acc, cur) => acc + cur.cantidad, 0);
+             let totalVolumen = pedidosEnCurso.reduce((acc, cur) => acc + safeNum(cur.volumen), 0);
+             let totalPeso = pedidosEnCurso.reduce((acc, cur) => acc + safeNum(cur.peso), 0);
+             let totalValor = pedidosEnCurso.reduce((acc, cur) => acc + safeNum(cur.valor), 0);
+             let totalCantidad = pedidosEnCurso.reduce((acc, cur) => acc + cur.cantidad, 0);
 
         const nuevoPedido = {
             camion: pedidoCamion.economico,
@@ -1341,7 +1419,7 @@ function verificarCapacidad(volumen, peso) {
         };
 
         try {
-            const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl?sheet=confirmados', {
+            const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid?sheet=confirmados', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ data: nuevoPedido })
@@ -1355,7 +1433,7 @@ function verificarCapacidad(volumen, peso) {
             document.getElementById('inputPedidoNumEconomico').value = '';
             renderPedidosActuales();
             actualizarGraficas();
-            alert('Pedido aceptado y guardado en pedidos confirmados.');   c
+            alert('Pedido aceptado y guardado en pedidos confirmados.');
             renderPedidosConfirmados();
         } catch (error) {
             alert('Error al guardar el pedido confirmado: ' + error.message);
@@ -1462,7 +1540,7 @@ facturaClearBtn.onclick = () => {
 async function agregarNuevosProductosAlInventario(productos) {
     try {
         // 1. Obtener inventario actual
-        const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl');
+        const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid');
         if (!res.ok) throw new Error('No se pudo cargar inventario');
         const inventarioActual = await res.json();
 
@@ -1482,7 +1560,7 @@ async function agregarNuevosProductosAlInventario(productos) {
 
         // 4. Enviar solo si hay nuevos
         if (nuevosDatos.length > 0) {
-            await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl', {
+            await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ data: nuevosDatos })
@@ -1635,7 +1713,7 @@ document.getElementById('btnTerminarBloqueFactura').onclick = async () => {
 // Guardar en SheetDB (más rápido: POST en lote)
 async function guardarFacturasEnSheetDB(facturas) {
     try {
-        await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl?sheet=facturas', {
+        await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid?sheet=facturas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data: facturas }) // Enviar array
@@ -1757,12 +1835,12 @@ async function eliminarBloqueFactura(idx) {
     // 1. Obtén todas las filas con ese nombre
     let errores = 0;
     try {
-        const res = await fetch(`https://sheetdb.io/api/v1/y7fxgl7z2bskl/Nombre/${encodeURIComponent(nombreBloque)}?sheet=facturas`);
+        const res = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/Nombre/${encodeURIComponent(nombreBloque)}?sheet=facturas`);
         const facturas = await res.json();
         // 2. Elimina cada una por su row_id
         for (const factura of facturas) {
             if (factura.row_id) {
-                const delRes = await fetch(`https://sheetdb.io/api/v1/y7fxgl7z2bskl/row_id/${factura.row_id}?sheet=facturas`, {
+                const delRes = await fetch(`https://sheetdb.io/api/v1/tblylxi4mrvid/row_id/${factura.row_id}?sheet=facturas`, {
                     method: 'DELETE'
                 });
                 if (!delRes.ok) errores++;
@@ -1788,7 +1866,7 @@ document.getElementById('facturaSearchFolio').addEventListener('input', function
 // Al cargar la pestaña, carga los bloques desde SheetDB
 document.querySelector('button[data-tab="facturas"]').addEventListener('click', async () => {
     try {
-        const res = await fetch('https://sheetdb.io/api/v1/y7fxgl7z2bskl?sheet=facturas');
+        const res = await fetch('https://sheetdb.io/api/v1/tblylxi4mrvid?sheet=facturas');
         if (!res.ok) throw new Error('No se pudo cargar facturas');
         const facturas = await res.json();
         bloquesFacturas = [];
