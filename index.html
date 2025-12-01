@@ -143,8 +143,6 @@
 
     <div id="result" style="display:none; max-width: 900px; margin: 20px auto; background:white; padding:10px; border-radius:10px;">
         <div style="text-align:center;">
-            <button class="btn-primary" onclick="downloadCSV()">💾 DESCARGAR CSV</button>
-            <button class="btn-primary" onclick="copyTable()">📋 COPIAR TABLA</button>
             <button id="btnSendSheet" class="btn-primary" onclick="openNameModal()">📤 ENVIAR A HOJA</button>
         </div>
         <div id="tableContainer"></div>
@@ -552,8 +550,10 @@
             }
 
             // Construir filas: rellenar solo lo que tenemos, demás como cadena vacía
+            // Añadimos tanto 'traspasos/Nombre' como 'Nombre' por compatibilidad
             const rows = extractedData.map(item => ({
                 'traspasos/Nombre': nombre,
+                'Nombre': nombre,
                 'Folio': '',
                 'Fecha de Emisión': '',
                 'Usuario': '',
@@ -584,6 +584,21 @@
                 console.log('SheetDB response', json);
                 showStatus('✅ Datos enviados correctamente a la hoja "traspasos".', 'status-ready');
                 alert('Datos enviados correctamente a la hoja "traspasos".');
+
+                // Limpiar datos extraídos y la interfaz tal como solicitaste
+                extractedData = [];
+                resultDiv.style.display = 'none';
+                tableContainer.innerHTML = '';
+                btnClear.style.display = 'none';
+                pdfInput.value = '';
+                // Deshabilitar botón de inicio hasta que se cargue otro PDF
+                btnStart.disabled = true;
+                if(!btnStart.classList.contains('btn-disabled')) btnStart.classList.add('btn-disabled');
+                // Reset progreso visual
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                pageCounter.textContent = '';
+                showStatus('Esperando archivo PDF...', 'status-ready');
             } catch (e) {
                 console.error('Error al enviar a SheetDB', e);
                 showStatus('❌ Error al enviar los datos.', 'status-error');
