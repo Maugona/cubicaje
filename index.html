@@ -103,21 +103,92 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.6);
             align-items: center;
             justify-content: center;
         }
         .modal-content {
-            background-color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
+            padding: 30px;
             width: 90%;
-            max-width: 420px;
-            border-radius: 8px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+            max-width: 450px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
         }
-        .modal-actions { text-align: right; margin-top: 12px; }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .modal-content h3 {
+            color: white;
+            margin: 0 0 10px 0;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-content p {
+            color: rgba(255,255,255,0.9);
+            margin: 0 0 20px 0;
+            font-size: 14px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.95);
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .modal-content input:focus {
+            outline: none;
+            border-color: white;
+            background: white;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal-actions button {
+            padding: 12px 24px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .modal-actions .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+        }
+        .modal-actions .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .modal-actions .btn-primary {
+            background: #28a745;
+            color: white;
+        }
+        .modal-actions .btn-primary:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40,167,69,0.4);
+        }
     </style>
 </head>
 <body>
@@ -149,12 +220,12 @@
         <!-- Modal para pedir Nombre antes de enviar -->
         <div id="nameModal" class="modal">
             <div class="modal-content">
-                <h3>Ingresa el nombre para la hoja</h3>
-                <p>Este nombre se asignará a la columna <strong>traspasos/Nombre</strong> en la hoja.</p>
-                <input id="sheetNameInput" type="text" placeholder="Nombre (ej. Sucursal A)" style="width:100%; padding:8px; font-size:16px;" />
+                <h3>📝 Nombre del Documento</h3>
+                <p>Asigna un nombre a este lote. Se guardará en la columna <strong>traspasos/Nombre</strong>.</p>
+                <input id="sheetNameInput" type="text" placeholder="Ej. Sucursal A, Almacén 1..." />
                 <div class="modal-actions">
-                    <button class="btn-secondary" onclick="closeNameModal()">Cancelar</button>
-                    <button class="btn-primary" onclick="confirmSendToSheetDB()">Enviar</button>
+                    <button class="btn-secondary" onclick="closeNameModal()">❌ Cancelar</button>
+                    <button class="btn-primary" onclick="confirmSendToSheetDB()">✅ Guardar y Enviar</button>
                 </div>
             </div>
         </div>
@@ -520,9 +591,16 @@
         function openNameModal() {
             const modal = document.getElementById('nameModal');
             const input = document.getElementById('sheetNameInput');
-            input.value = '';
+            // Autollenar con el nombre del archivo PDF (sin extensión)
+            if(currentFile) {
+                const fileName = currentFile.name.replace(/\.pdf$/i, '').trim();
+                input.value = fileName || '';
+            } else {
+                input.value = '';
+            }
             modal.style.display = 'flex';
             input.focus();
+            input.select(); // Seleccionar el texto para que sea fácil cambiarlo
         }
 
         function closeNameModal() {
@@ -619,11 +697,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
