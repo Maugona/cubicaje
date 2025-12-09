@@ -118,6 +118,12 @@
             box-shadow: 0 6px 18px rgba(0,0,0,0.2);
         }
         .modal-actions { text-align: right; margin-top: 12px; }
+        .modal-content h3 { margin: 0 0 8px 0; font-size: 18px; }
+        .modal-content p { margin: 0 0 12px 0; color: #555; font-size: 14px; }
+        #sheetNameInput { width: 100%; padding: 10px 12px; font-size: 15px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; }
+        /* Mejor apariencia para botones dentro del modal */
+        .modal .btn-primary { background: #007bff; padding: 10px 14px; border-radius: 6px; }
+        .modal .btn-secondary { background: #6c757d; padding: 10px 14px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -520,9 +526,17 @@
         function openNameModal() {
             const modal = document.getElementById('nameModal');
             const input = document.getElementById('sheetNameInput');
-            input.value = '';
+            let defaultName = '';
+            if (currentFile && currentFile.name) {
+                // Quitar extensión del archivo
+                defaultName = currentFile.name.replace(/\.[^/.]+$/, '');
+                // Eliminar caracteres no válidos para nombres (/, \\, :, *, ?, ", <, >, |)
+                defaultName = defaultName.replace(/[\/\\:\*\?"<>|]/g, '').trim();
+            }
+            input.value = defaultName || 'Traspasos';
             modal.style.display = 'flex';
-            input.focus();
+            // Seleccionar todo para que el usuario pueda editar rápidamente
+            setTimeout(() => { input.focus(); input.select(); }, 50);
         }
 
         function closeNameModal() {
