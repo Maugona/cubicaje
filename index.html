@@ -124,6 +124,19 @@
         /* Mejor apariencia para botones dentro del modal */
         .modal .btn-primary { background: #007bff; padding: 10px 14px; border-radius: 6px; }
         .modal .btn-secondary { background: #6c757d; padding: 10px 14px; border-radius: 6px; }
+        /* Botón junto a INICIAR ESCANEO */
+        #btnClearCache {
+            position: static;
+            display: inline-block;
+            box-shadow: none;
+            padding: 12px 18px;
+            border-radius: 5px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        @media (max-width: 480px) {
+            #btnClearCache { padding: 10px 14px; font-size: 14px; margin-left: 6px; display: inline-block; }
+        }
     </style>
 </head>
 <body>
@@ -134,6 +147,7 @@
             <input type="file" id="pdfInput" accept=".pdf" />
         </div>
         <button id="btnStart" class="btn-primary btn-disabled" onclick="startScan()" disabled>🚀 INICIAR ESCANEO</button>
+        <button id="btnClearCache" class="btn-secondary" onclick="confirmClearCache()" title="Limpiar caché y recargar" aria-label="Limpiar caché">🧹 LIMPIAR CACHE</button>
         <button id="btnClear" class="btn-secondary" onclick="clearAll()" style="display:none;">🗑️ LIMPIAR TODO</button>
     </div>
     <div id="status" class="status-ready">Esperando archivo PDF...</div>
@@ -599,7 +613,7 @@
                 showStatus('🔄 Enviando datos a la hoja...','status-processing');
 
                 // Enviar explícitamente a la hoja llamada "traspasos"
-                const res = await fetch('https://sheetdb.io/api/v1/stmsgmv8bpa95?sheet=traspasos', {
+                const res = await fetch('https://sheetdb.io/api/v1/stmsgmv8bpa955?sheet=traspasos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ data: rows })
@@ -639,6 +653,44 @@
             }
         }
 
+        function confirmClearCache() {
+            if (confirm('¿Deseas borrar la caché y recargar la página?')) {
+                clearCache();
+            }
+        }
+
+        function confirmClearCache() {
+            if (confirm('¿Deseas borrar la caché y recargar la página?')) {
+                clearCache();
+            }
+        }
+
+        function clearCache() {
+            try {
+                // Limpiar localStorage y sessionStorage
+                if (window.localStorage) localStorage.clear();
+                if (window.sessionStorage) sessionStorage.clear();
+            } catch (e) {
+                console.warn('No se pudo limpiar storage:', e);
+            }
+
+            if ('caches' in window) {
+                caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+                    .then(() => {
+                        showStatus('✅ Caché y almacenamiento limpiados.', 'status-ready');
+                        // Recargar para aplicar cambios
+                        setTimeout(() => location.reload(), 600);
+                    }).catch(err => {
+                        console.error('Error limpiando Cache Storage:', err);
+                        showStatus('⚠️ Error al limpiar la caché.', 'status-error');
+                        alert('Ocurrió un error al limpiar la caché. Revisa la consola.');
+                    });
+            } else {
+                showStatus('✅ Almacenamiento local limpiado.', 'status-ready');
+                setTimeout(() => location.reload(), 600);
+            }
+        }
+
         function clearAll() {
             extractedData = [];
             pdfInput.value = '';
@@ -652,5 +704,4 @@
     </script>
 </body>
 </html>
-
 
